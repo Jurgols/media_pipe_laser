@@ -1,0 +1,8 @@
+# created by virtualenv automatically
+lib
+lib64
+share
+bin
+FingerImages
+__pycache__
+
