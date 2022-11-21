@@ -18,26 +18,22 @@ def fingerCount(handLandmark) -> list:
   # empty array to polulat finger states
   finger_state = []
   # defined wrist and index mcp coordinates for distance measurement
-  wristX = hand_landmarks.landmark[mp_hands.HandLandmark.WRIST].x
-  wristY = hand_landmarks.landmark[mp_hands.HandLandmark.WRIST].y
-  indexMcpX = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_MCP].x
-  indexMcptY = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_MCP].y
+  wrist = hand_landmarks.landmark[mp_hands.HandLandmark.WRIST]
+  pinkyMcp = hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_MCP]
   # iterare fingers
   for finger in fingers:
     # finger tip coordinates
-    tipX = handLandmark.landmark[finger].x
-    tipY = handLandmark.landmark[finger].y
+    tip = handLandmark.landmark[finger]
     # finger second joint coordinates
-    pipX = handLandmark.landmark[finger -2].x
-    pipY = handLandmark.landmark[finger -2].y
+    pip = handLandmark.landmark[finger -2]
     # if finger is not thumb measure distance to wrist coordinate
     if finger != mp_hands.HandLandmark.THUMB_TIP:
-      tipDist = np.linalg.norm(np.subtract([tipX,tipY],[wristX,wristY]))
-      pipDist = np.linalg.norm(np.subtract([pipX,pipY], [wristX,wristY]))
+      tipDist = np.linalg.norm(np.subtract([tip.x,tip.y],[wrist.x,wrist.y]))
+      pipDist = np.linalg.norm(np.subtract([pip.x,pip.y], [wrist.x,wrist.y]))
     # if thumb measure distance to index finger mcp
     else:
-      tipDist = np.linalg.norm(np.subtract([tipX,tipY],[indexMcpX,indexMcptY]))
-      pipDist = np.linalg.norm(np.subtract([pipX,pipY], [indexMcpX,indexMcptY]))
+      tipDist = np.linalg.norm(np.subtract([tip.x,tip.y],[pinkyMcp.x,pinkyMcp.y]))
+      pipDist = np.linalg.norm(np.subtract([pip.x,pip.y], [pinkyMcp.x,pinkyMcp.y]))
     # if finger tip is higher than finger 2nd joint then finger is open ( append 1 to list)
     if tipDist > pipDist:
       finger_state.append(1)
