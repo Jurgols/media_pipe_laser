@@ -6,6 +6,13 @@ mp_drawing_styles = mp.solutions.drawing_styles
 mp_hands = mp.solutions.hands
 
 
+#### TODO
+# Camera IO polling with threading
+# Flask microserver
+# Reduce frame size before inputing into MediaPipe then
+#draw on full size frame.
+ 
+
 
 def fingerCount(handLandmark) -> list:
 
