@@ -23,7 +23,7 @@ def image_resize(image, scale):
 
 
 class CameraFetch:
-  def __init__(self, src=0, width=1920, height=1080):
+  def __init__(self, src=0, width=800, height=400):
     self.capture = cv2.VideoCapture(src)
     self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, width)
     self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
@@ -36,21 +36,21 @@ class CameraFetch:
 
   def __del__(self):
     self.capture.release()
-  def img_resize(self, image, scale):
-    # Resizing images for better mp performance
-    width = int(image.shape[1] * scale / 100)
-    height = int(image.shape[0] * scale / 100)
-    dim = (width, height)
-    self.resized = cv2.resize(image, dim, interpolation = cv2.INTER_AREA)
-    # print(self.resized.shape)
+  # def img_resize(self, image, scale):
+  #   # Resizing images for better mp performance
+  #   width = int(image.shape[1] * scale / 100)
+  #   height = int(image.shape[0] * scale / 100)
+  #   dim = (width, height)
+  #   self.resized = cv2.resize(image, dim, interpolation = cv2.INTER_AREA)
+  #   # print(self.resized.shape)
 
   def update(self):
     # Read the next frame from the stream in a different thread
     while True:
         if self.capture.isOpened():
-            (self.status, self.frame) = self.capture.read()
-            self.frame = cv2.flip(self.frame,1)
-            self.resized = image_resize(self.frame, 25)
+            (self.status, self.read) = self.capture.read()
+            self.frame = cv2.flip(self.read,1)
+            self.resized = image_resize(self.frame, 50)
         
         time.sleep(.02) # 60 fps MAX
     
