@@ -53,7 +53,7 @@ class CameraFetch:
             self.frame = cv2.flip(self.read,1)
             self.resized = image_resize(self.frame, 50)
         
-        time.sleep(.02) # 60 fps MAX
+        time.sleep(.01) # 60 fps MAX
     
     
   def mp_draw(self):
