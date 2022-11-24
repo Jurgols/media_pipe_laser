@@ -27,6 +27,7 @@ class CameraFetch:
     self.capture = cv2.VideoCapture(src)
     self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, width)
     self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+    self.capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
     # Start the thread to read frames from the video stream
     self.thread = Thread(target=self.update, args=())
     self.thread.daemon = True
