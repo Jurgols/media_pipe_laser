@@ -14,19 +14,20 @@ mp_hands = mp.solutions.hands
 
 
 # ==== TODO ====
-# Camera IO polling with threading
-# Flask microserver
-# Reduce frame size before inputing into MediaPipe then
-# draw on full size frame.
+#  DONE Camera IO polling with threading
+#  DONE Flask microserver
+#  DONE Reduce frame size before inputing into MediaPipe then
+#  DONE draw on full size frame.
+# coundown hand picker
+# project image overlay
 
- #Initialize the Flask app
-def image_resize(image, scale):
+def image_scale(image, scale):
     t1 = timeit.default_timer()
     # Resizing images for better mp performance
     width = int(image.shape[1] * scale / 100)
     height = int(image.shape[0] * scale / 100)
     dim = (width, height)
-    logging.debug("def image_resize  execution time: %f ms", (timeit.default_timer()-t1) * 1000)
+    logging.debug("def image_scale  execution time: %f ms", (timeit.default_timer()-t1) * 1000)
     return cv2.resize(image, dim, interpolation = cv2.INTER_AREA)
 
 
@@ -44,7 +45,11 @@ class CameraFetch:
     self.thread.daemon = True
     self.thread.start()
     self.frame = cv2.imread('loading-2.png', cv2.IMREAD_COLOR)
+    self.read = cv2.imread('loading-2.png', cv2.IMREAD_COLOR)
     self.resized = cv2.imread('loading-2.png', cv2.IMREAD_COLOR)
+    self.fingers = None
+    self.cvoverlay = None
+    self.prev_fingers = None
     logging.debug("CameraFetch __init__  execution time: %f ms", (timeit.default_timer()-t1) * 1000)
   # def __del__(self):
   #   self.capture.release()
@@ -63,8 +68,8 @@ class CameraFetch:
         t1 = timeit.default_timer()
         if self.capture.isOpened():
             (self.status, self.read) = self.capture.read()
-            self.frame = cv2.flip(self.read,1)
-            self.resized = image_resize(self.frame, 100)
+            self.read = cv2.flip(self.read, 1)
+            self.resized = image_scale(self.read, 50)
         logging.debug("CameraFetch update frame execution time: %f ms", (timeit.default_timer()-t1) *1000)
         time.sleep(.01) # 60 fps MAX
     
@@ -72,21 +77,44 @@ class CameraFetch:
   def mp_draw(self):
     # Draw the hand annotations on the image.  \  
       t1 = timeit.default_timer()
-      self.frame.flags.writeable = True
+      self.read.flags.writeable = True
       #self.frame = cv2.cvtColor( self.frame, cv2.COLOR_RGB2BGR)
-      if self.results.multi_hand_landmarks:
-        print(self.fingerCount(self.results.multi_hand_landmarks[0]))
+      if self.results.multi_hand_landmarks and not self.cvoverlay:
         for hand_landmarks in self.results.multi_hand_landmarks:
-            #print(hand_landmarks)
-            #print(self.fingerCount(hand_landmarks))
+            # print(hand_landmarks)
+            # print(self.fingerCount(hand_landmarks))
             if self.results.multi_hand_landmarks is not None:
                 mp_drawing.draw_landmarks(
-                self.frame,
+                self.read,
                 hand_landmarks,
                 mp_hands.HAND_CONNECTIONS,
                 mp_drawing_styles.get_default_hand_landmarks_style(),
                 mp_drawing_styles.get_default_hand_connections_style())
-      # Flip the image horizontally for a selfie-view display.
+        self.fingers = self.fingerCount(self.results.multi_hand_landmarks[0])
+        if self.fingers == self.prev_fingers:
+          if not self.counter:
+              self.counter =  time.time()
+          self.read = cv2.putText(self.read, f'"T:" {round(time.time() - self.counter, 1)}',
+                                  (50,50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+          if time.time() - self.counter > 2:
+            self.cvoverlay = sum(self.fingers)
+            self.t_overlay = time.time()
+        else:
+          self.counter = None
+        self.prev_fingers = self.fingers
+       # Flip the image horizontally for a selfie-view display.
+      
+      if self.cvoverlay and time.time() - self.t_overlay < 5:
+        x_offset=y_offset=0
+        s_img = cv2.imread(f'{self.cvoverlay}.png')
+        s_img = cv2.resize(s_img, (self.read.shape[1],self.read.shape[0]), interpolation = cv2.INTER_AREA)
+        self.read[y_offset:y_offset+s_img.shape[0], x_offset:x_offset+s_img.shape[1]] = s_img
+      # elif  time.time() - self.t_overlay > 5:
+      else:
+        self.cvoverlay = None
+
+       #self.frame = cv2.flip(self.read,1)
+      self.frame = self.read
       logging.debug("CameraFetch mp_draw execution time: %f ms", (timeit.default_timer()-t1)  * 1000)
 
   def mp_process(self):
@@ -97,8 +125,10 @@ class CameraFetch:
     min_tracking_confidence=0.5) as hands:
       self.resized.flags.writeable = False
       # print(self.resized.shape)
-      # self.resized = cv2.cvtColor(self.resized, cv2.COLOR_BGR2RGB)
+      self.resized = cv2.cvtColor(self.resized, cv2.COLOR_BGR2RGB)
+      # print(self.resized.shape)
       self.results = hands.process(self.resized)
+      # print(self.results.multi_hand_landmarks)
 
     logging.debug("CameraFetch mp_process execution time: %f ms", (timeit.default_timer()-t1) * 1000)
   
@@ -111,7 +141,7 @@ class CameraFetch:
                mp_hands.HandLandmark.MIDDLE_FINGER_TIP,
                mp_hands.HandLandmark.RING_FINGER_TIP,
                mp_hands.HandLandmark.PINKY_TIP]
-    # empty array to polulat finger states
+    # empty array to populate finger states
     finger_state = []
     # defined wrist and index mcp coordinates for distance measurement
     wrist = handLandmark.landmark[mp_hands.HandLandmark.WRIST]
@@ -140,7 +170,7 @@ class CameraFetch:
 
   def mp_imshow(self):
     t1 = timeit.default_timer()
-    cv2.imshow('MediaPipe Hands', cv2.flip(self.frame, 1))
+    cv2.imshow('MediaPipe Hands', self.frame)
     if cv2.waitKey(5) & 0xFF == 27:
       self.capture.release()
       cv2.destroyAllWindows()
@@ -161,7 +191,7 @@ class CameraFetch:
 
 if __name__ == '__main__': 
     logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
-    cameraCapture = CameraFetch(width=1920, height=1080)
+    cameraCapture = CameraFetch(width=1280, height=720)
 
     while True:
         try:
